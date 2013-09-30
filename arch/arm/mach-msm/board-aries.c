@@ -113,6 +113,12 @@
 #define XIAOMI_MITWO_RAM_CONSOLE_SIZE_DEFAULT    (SZ_1M)
 #endif
 
+#ifdef CONFIG_KEXEC_HARDBOOT
+#include <asm/setup.h>
+#include <asm/memory.h>
+#define XIAOMI_PERSISTENT_RAM_SIZE   (SZ_1M)
+#endif
+
 #define MSM_PMEM_ADSP_SIZE         0x7800000
 #define MSM_PMEM_AUDIO_SIZE        0x4CF000
 #ifdef CONFIG_FB_MSM_HDMI_AS_PRIMARY
@@ -817,6 +823,30 @@ static void __init apq8064_reserve(void)
 {
 	apq8064_set_display_params(prim_panel_name, ext_panel_name,ext_resolution);
 	msm_reserve();
+
+#ifdef CONFIG_KEXEC_HARDBOOT
+ 	// Reserve space for hardboot page - just after ram_console,
+ 	// at the start of second memory bank
+ 	int ret;
+ 	phys_addr_t start;
+ 	struct membank* bank;
+ 
+ 	if (meminfo.nr_banks < 2) {
+ 		pr_err("%s: not enough membank\n", __func__);
+ 		return;
+ 	}
+ 
+ 	bank = &meminfo.bank[1];
+ 	start = bank->start + SZ_1M;
+ 	ret = memblock_remove(start, SZ_1M);
+ 	if(!ret)
+ 		pr_info("Hardboot page reserved at 0x%X\n", start);
+ 	else
+ 		pr_err("Failed to reserve space for hardboot page at 0x%X!\n", start);
+#endif
+	apq8064_set_display_params(prim_panel_name, ext_panel_name,ext_resolution);
+  	msm_reserve();
+
 #ifdef CONFIG_ANDROID_RAM_CONSOLE
     ram_console_debug_reserve();
 #endif
