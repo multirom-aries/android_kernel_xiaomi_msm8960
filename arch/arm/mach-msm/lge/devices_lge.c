@@ -24,7 +24,7 @@
 
 #include <mach/board_lge.h>
 
-#include <ram_console.h>
+#include <linux/platform_data/ram_console.h>
 
 /* setting whether uart console is enalbed or disabled */
 static int uart_console_mode = 0;
