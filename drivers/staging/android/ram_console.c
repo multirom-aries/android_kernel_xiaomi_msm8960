@@ -22,7 +22,7 @@
 #include <linux/string.h>
 #include <linux/uaccess.h>
 #include <linux/io.h>
-#include "ram_console.h"
+#include <linux/platform_data/ram_console.h>
 
 static struct persistent_ram_zone *ram_console_zone;
 static const char *bootinfo;
@@ -178,3 +178,4 @@ static int __init ram_console_late_init(void)
 
 late_initcall(ram_console_late_init);
 postcore_initcall(ram_console_module_init);
+

@@ -103,6 +103,15 @@
 #include "devices-msm8x60.h"
 #include "smd_private.h"
 #include "sysmon.h"
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+#include <linux/persistent_ram.h>
+#include <linux/platform_data/ram_console.h>
+#define XIAOMI_MITWO_RAM_CONSOLE_SIGSIZE  (SZ_1M)
+//we need to UL(0x88E00000) + 1 = 0x88E00000
+//ram_console start = 0x88E00000 + SZ_1M  = 0x88F00000
+#define XIAOMI_MITWO_RAM_CONSOLE_START	UL(0x88F00000)
+#define XIAOMI_MITWO_RAM_CONSOLE_SIZE_DEFAULT    (SZ_1M)
+#endif
 
 #define MSM_PMEM_ADSP_SIZE         0x7800000
 #define MSM_PMEM_AUDIO_SIZE        0x4CF000
@@ -248,6 +257,9 @@ static struct memtype_reserve apq8064_reserve_table[] __initdata = {
 	},
 };
 
+
+
+
 static void __init reserve_rtb_memory(void)
 {
 #if defined(CONFIG_MSM_RTB)
@@ -296,6 +308,60 @@ static int apq8064_paddr_to_memtype(unsigned int paddr)
 {
 	return MEMTYPE_EBI1;
 }
+
+
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+static struct persistent_ram_descriptor ram_desc[] = {
+    {
+        .name = "ram_console",
+        .size = XIAOMI_MITWO_RAM_CONSOLE_SIGSIZE
+    },
+};
+
+static struct persistent_ram xiaomi_mi2_ram = {
+        .descs = ram_desc,
+        .num_descs = ARRAY_SIZE(ram_desc),
+        .size = XIAOMI_MITWO_RAM_CONSOLE_SIGSIZE,
+};
+
+void __init ram_console_debug_reserve(void)
+{
+    struct persistent_ram *pram = &xiaomi_mi2_ram;
+    struct membank* bank = &meminfo.bank[0];
+
+    pram->start = bank->start + bank->size + XIAOMI_MITWO_RAM_CONSOLE_SIGSIZE;
+    persistent_ram_early_init(pram);
+	pr_info("ram_console reserve at 0x%lx\n",pram->start);
+
+}
+static struct resource ram_console_resources[] = {
+        {
+				.start = XIAOMI_MITWO_RAM_CONSOLE_START,
+				.end   = XIAOMI_MITWO_RAM_CONSOLE_START +
+						XIAOMI_MITWO_RAM_CONSOLE_SIZE_DEFAULT - 1,
+                .flags = IORESOURCE_MEM,
+        },
+};
+
+
+static struct platform_device ram_console_device = {
+        .name           = "ram_console",
+        .id             = -1,
+        .num_resources  = ARRAY_SIZE(ram_console_resources),
+        .resource       = ram_console_resources,
+};
+
+void __init ram_console_debug_init(void)
+{
+        int err;
+        err = platform_device_register(&ram_console_device);
+        if (err)
+                pr_err("%s: ram console registration failed (%d)!\n",
+                        __func__, err);
+}
+#endif
+
+
 
 #define FMEM_ENABLED 0
 
@@ -749,9 +815,11 @@ early_param("ext_resolution", hdmi_resulution_setup);
 
 static void __init apq8064_reserve(void)
 {
-	apq8064_set_display_params(prim_panel_name, ext_panel_name,
-		ext_resolution);
+	apq8064_set_display_params(prim_panel_name, ext_panel_name,ext_resolution);
 	msm_reserve();
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+    ram_console_debug_reserve();
+#endif
 }
 
 static void __init apq8064_early_reserve(void)
@@ -4449,6 +4517,9 @@ static void __init apq8064_common_init(void)
 	}
 	BUG_ON(msm_pm_boot_init(&msm_pm_boot_pdata));
 	apq8064_epm_adc_init();
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+	ram_console_debug_init();
+#endif
 }
 
 static void __init apq8064_allocate_memory_regions(void)

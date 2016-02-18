@@ -174,7 +174,13 @@ static struct resource mem_res[] = {
 		.start = 0,
 		.end = 0,
 		.flags = IORESOURCE_MEM
-	}
+    },
+    {
+        .name = "ram_console",
+        .start = 0,
+        .end = 0,
+        .flags = IORESOURCE_MEM
+    }
 };
 
 #define video_ram   mem_res[0]
