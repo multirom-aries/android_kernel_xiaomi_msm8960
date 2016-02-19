@@ -821,9 +821,6 @@ early_param("ext_resolution", hdmi_resulution_setup);
 
 static void __init apq8064_reserve(void)
 {
-	apq8064_set_display_params(prim_panel_name, ext_panel_name,ext_resolution);
-	msm_reserve();
-
 #ifdef CONFIG_KEXEC_HARDBOOT
  	// Reserve space for hardboot page - just after ram_console,
  	// at the start of second memory bank
